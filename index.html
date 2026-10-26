@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spike Radar</title>
+<style>
+:root{--bg:#F2F5F5;--surface:#fff;--ink:#14212B;--muted:#5A6873;--faint:#8A97A0;--line:#D9E0E2;--soft:#E9EEEF;--accent:#0F6E68;--accent-soft:#DDEFED;
+--pri:#B42318;--pri-bg:#FDE8E6;--look:#A15C07;--look-bg:#FEF1DC;--fine:#1E7A45;--fine-bg:#E3F3E9;--grid:#E3E8EA}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0D1417;--surface:#141E22;--ink:#E4ECEE;--muted:#9AAAB1;--faint:#6E7F86;--line:#26353B;--soft:#1B272C;
+--accent:#4FC3B5;--accent-soft:#163430;--pri:#FF8B7E;--pri-bg:#3A1A17;--look:#F2AA4C;--look-bg:#36260E;--fine:#5BCB8A;--fine-bg:#15301F;--grid:#22313A}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif;padding:0 16px 40px}
+.wrap{max-width:1360px;margin:0 auto}.demobar{margin:12px 0 0;background:var(--accent-soft);border-radius:8px;padding:8px 14px;font-size:14px}.num{font-variant-numeric:tabular-nums}button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--look);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:20px 0 16px}
+h1{font-size:28px;margin:0;line-height:1.1}.sub{color:var(--muted);margin:2px 0 0;font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:7px;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--accent)}.btn.main{background:var(--accent);color:#fff;border-color:var(--accent);font-size:16px;padding:12px 22px}
+.link{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:14px}
+
+/* start screen */
+.start{max-width:640px;margin:40px auto;text-align:center}
+.drop{border:2px dashed var(--line);border-radius:14px;background:var(--surface);padding:40px 24px;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop h2{margin:0 0 8px;font-size:22px}.drop p{margin:0 0 20px;color:var(--muted)}
+.steps{text-align:left;margin:22px auto 0;max-width:520px;color:var(--muted);font-size:14.5px;padding-left:20px}
+.steps li{margin-bottom:4px}.steps b{color:var(--ink)}
+.status{margin-top:14px;font-size:14px;color:var(--muted)}.status.err{color:var(--pri);font-weight:600}
+
+/* dashboard */
+.loaded{font-size:13px;color:var(--muted);text-align:right;line-height:1.7}.loaded b{color:var(--ink)}
+.loaded select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:1px 4px}
+.note{background:var(--look-bg);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}@media(max-width:820px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}.tile .k{font-size:12.5px;color:var(--muted)}.tile .v{font-size:30px;font-weight:700}
+.main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}@media(max-width:1050px){.main{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}.head h2{font-size:18px;margin:0}
+.filters{display:flex;flex-wrap:wrap;gap:6px}.filter{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:3px 11px;font-size:13px}
+.filter[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input[type=search]{font:inherit;font-size:14px;padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);min-width:170px}
+.scroll{max-height:620px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:12px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--soft);vertical-align:top}tbody tr{cursor:pointer}tbody tr:hover td{background:var(--soft)}
+tbody tr.sel td{background:var(--accent-soft)}tbody tr.done td{opacity:.55}
+td.r{text-align:right;font-family:Consolas,monospace;white-space:nowrap}td.why{color:var(--muted);min-width:180px}.dm{font-family:Consolas,monospace;font-size:12.5px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 9px 2px 7px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pri{color:var(--pri);background:var(--pri-bg)}.look{color:var(--look);background:var(--look-bg)}.fine{color:var(--fine);background:var(--fine-bg)}.none{color:var(--muted);background:var(--soft)}
+.detail{padding:16px}.detail h3{margin:0;font-size:21px}
+ul.why{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}ul.why li{background:var(--bg);border-radius:7px;padding:8px 11px;font-size:14px}
+ul.why li b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--look)}
+.tl{width:100%;font-size:13px;margin-top:6px}.tl td,.tl th{padding:5px 8px}.tl tr.hl td{background:var(--look-bg);font-weight:600}
+svg{display:block;width:100%;height:auto}
+.btn.c{border-color:var(--pri);color:var(--pri)}.btn.f{border-color:var(--fine);color:var(--fine)}.btn.on.c{background:var(--pri);color:#fff}.btn.on.f{background:var(--fine);color:#fff}
+.review{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+textarea{flex:1 1 100%;font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-height:54px}
+.empty{padding:28px;text-align:center;color:var(--muted)}.foot{margin-top:20px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="demobar">Demo with <b>made-up students</b>. To try your own Manage Enrollments reports, click <b>Load different reports</b>. Files are read only in your browser and are never uploaded.</div>
+  <header>
+    <div><h1>Spike Radar</h1><p class="sub">Flags Edgenuity progress that looks too fast, so a person can take a look.</p></div>
+    <div id="topRight"></div>
+  </header>
+
+  <!-- START: pick reports -->
+  <section class="start" id="start">
+    <div class="drop" id="drop">
+      <h2>Load your Manage Enrollments reports</h2>
+      <p>Select <b>all</b> of the reports you've saved (Ctrl+A in the folder), or drag them here.</p>
+      <button class="btn main" type="button" id="pick">Choose reports</button>
+      <input type="file" id="files" accept=".csv" multiple hidden>
+      <div class="status" id="status"></div>
+    </div>
+    <ol class="steps">
+      <li>Each day, save the new <b>Manage Enrollments</b> report into the same folder as this page. Keep the date in the filename.</li>
+      <li>Open this page and load <b>all</b> the reports. The more days, the better it knows each student's normal pace.</li>
+    </ol>
+    <p class="status">Everything stays on this computer. Nothing is uploaded. <button class="link" type="button" id="demo">See it with made-up data</button></p>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dash" hidden>
+    <div id="notes"></div>
+    <div class="tiles">
+      <div class="tile"><div class="k">Flagged</div><div class="v num" id="tF"></div></div>
+      <div class="tile"><div class="k">Priority</div><div class="v num" id="tP"></div></div>
+      <div class="tile"><div class="k">Reviewed</div><div class="v num" id="tR"></div></div>
+      <div class="tile"><div class="k">Days of history</div><div class="v num" id="tD"></div></div>
+    </div>
+    <div class="main">
+      <section class="card">
+        <div class="head"><h2>Review queue</h2><div class="filters" id="filters"></div><input type="search" id="q" placeholder="Search name, ID, course" aria-label="Search"></div>
+        <div class="scroll"><table><thead><tr><th>Level</th><th>Student</th><th>Course</th><th style="text-align:right">Gain</th><th style="text-align:right">Time added</th><th>Why</th><th>Review</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </section>
+      <section class="card">
+        <div class="head"><h2>Student detail</h2><button class="btn" type="button" id="export">Export reviews</button></div>
+        <div class="detail" id="detail"></div>
+      </section>
+    </div>
+    <p class="foot">Rules: fast for the time logged (4× the course's usual % per hour), almost no time logged, a big jump compared to the student's own normal, over 15% between reports, and several courses at once. Reviews are saved in this browser; use Export reviews to keep a record.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  const RULES = {rate_min_gain:3, rate_mult:4, rate_floor:5, no_time_min:5, spike_mult:4, spike_min:6, min_history:5, spike_needs_rate:2, ceiling:15, life_min:20, life_mult:4};
+  const $ = s=>document.querySelector(s);
+  const esc = s=>String(s ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const MON = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const iso = d=>d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  const dayDiff = (a,b)=>Math.round((new Date(b+"T12:00") - new Date(a+"T12:00"))/864e5);
+  const dshort = s=>new Date(s+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"numeric",day:"numeric"});
+  const ft = s=>{ s = Math.max(0, +s||0); return Math.floor(s/3600) + "h " + String(Math.floor(s%3600/60)).padStart(2,"0") + "m"; };
+
+  // ---------- reading reports ----------
+  function parseCSV(text){
+    const rows = []; let row = [], f = "", q = false;
+    for(let i=0; i<text.length; i++){
+      const c = text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q = false; } else f += c; }
+      else if(c==='"') q = true;
+      else if(c===","){ row.push(f); f = ""; }
+      else if(c==="\n"){ row.push(f); rows.push(row); row = []; f = ""; }
+      else if(c!=="\r") f += c;
+    }
+    if(f || row.length){ row.push(f); rows.push(row); }
+    const head = (rows.shift() || []).map(h=>h.replace(/^﻿/,"").trim());
+    return rows.filter(r=>r.length > 1).map(r=>Object.fromEntries(head.map((h,i)=>[h, (r[i]||"").trim()])));
+  }
+  function fileDate(file){
+    const m = file.name.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/);
+    if(m && MON[m[2].toLowerCase()] != null) return iso(new Date(+m[3], MON[m[2].toLowerCase()], +m[1]));
+    return iso(new Date(file.lastModified));
+  }
+  const pct = v=>{ const n = parseFloat(String(v).replace("%","")); return isNaN(n) ? null : n; };
+  const secs = v=>{ const p = String(v||"").split(":").map(Number); if(p.some(isNaN)) return 0; while(p.length<3) p.unshift(0); return p[0]*3600 + p[1]*60 + p[2]; };
+
+  async function loadFiles(list){
+    const files = [...list].filter(f=>/\.csv$/i.test(f.name));
+    if(!files.length){ setStatus("Those don't look like CSV files. Choose the Manage Enrollments reports.", true); return; }
+    setStatus("Reading " + files.length + " report" + (files.length>1?"s":"") + "…");
+    const reports = [];
+    for(const f of files){
+      const rows = parseCSV(await f.text());
+      if(!rows.length || !("Enrollment ID" in rows[0]) || !("Progress" in rows[0])){ setStatus(f.name + " isn't a Manage Enrollments report (no Enrollment ID or Progress column).", true); return; }
+      reports.push({date: fileDate(f), name: f.name, rows});
+    }
+    analyze(reports);
+  }
+  function setStatus(t, err){ const s = $("#status"); s.textContent = t; s.className = "status" + (err ? " err" : ""); }
+
+  // ---------- the rules ----------
+  let M = {}, F = [], lastReports = null;
+  const SENS = {fewer:{label:"Fewer flags", k:1.5}, balanced:{label:"Balanced", k:1}, more:{label:"More flags", k:.7}};
+  let sens = "balanced"; try{ sens = localStorage.getItem("spike-radar-sens") || "balanced"; }catch(e){}
+  function analyze(reports){
+    lastReports = reports;
+    const k = (SENS[sens] || SENS.balanced).k;
+    const RULES_K = Object.assign({}, RULES, {rate_mult:RULES.rate_mult*k, spike_mult:RULES.spike_mult*k, spike_min:RULES.spike_min*k, ceiling:RULES.ceiling*k, life_mult:RULES.life_mult*k});
+    const byDate = new Map(); reports.forEach(r=>byDate.set(r.date, r));   // one report per day (last one wins)
+    const dates = [...byDate.keys()].sort(), latest = dates[dates.length-1];
+    const enr = new Map(), info = new Map();
+    dates.forEach(d=>byDate.get(d).rows.forEach(r=>{
+      if((r["Enrollment Status"] || "Active") !== "Active" || r["Date Archived"]) return;
+      const p = pct(r["Progress"]), id = r["Enrollment ID"]; if(p==null || !id) return;
+      if(!enr.has(id)) enr.set(id, []);
+      enr.get(id).push({date:d, p, a:secs(r["Active Time"])});
+      if(d===latest) info.set(id, {uid:r["User ID"], ext:r["External ID"], name:r["Name"], course:r["Course Name"], teachers:r["Teachers"]});
+    }));
+
+    // each course's usual % per active hour, from the latest report
+    const rates = {};
+    info.forEach((x,id)=>{ const s = enr.get(id).at(-1); if(s.p >= 10 && s.a >= 3600) (rates[x.course] ||= []).push(s.p/(s.a/3600)); });
+    const med = a=>{ const b = a.slice().sort((x,y)=>x-y), m = b.length>>1; return b.length ? (b.length%2 ? b[m] : (b[m-1]+b[m])/2) : 0; };
+    const overall = med(Object.values(rates).flat()) || 1.5;
+    const courseRate = c=>rates[c] && rates[c].length >= 5 ? med(rates[c]) : overall;
+    const p90 = a=>{ const b = a.slice().sort((x,y)=>x-y); if(!b.length) return 0; const i = (b.length-1)*.9, lo = Math.floor(i), hi = Math.min(lo+1,b.length-1); return b[lo]+(b[hi]-b[lo])*(i-lo); };
+    // each course's normal big day: 90th percentile of daily progress gains across every student in that course
+    const dayGains = {};
+    info.forEach((x,id)=>{ const s = enr.get(id); for(let i=1; i<s.length-1; i++) (dayGains[x.course] ||= []).push((s[i].p - s[i-1].p)/Math.max(1, dayDiff(s[i-1].date, s[i].date))); });
+    const allGains = Object.values(dayGains).flat(), overallDay = allGains.length ? p90(allGains) : 1;
+    const courseDay = c=>dayGains[c] && dayGains[c].length >= 20 ? p90(dayGains[c]) : overallDay;
+    const R = RULES_K, flags = [];
+
+    info.forEach((x, id)=>{
+      const s = enr.get(id), cur = s.at(-1), cr = courseRate(x.course), reasons = [];
+      let score = 0, hard = false, gain = null, dt = null, since = null;
+      if(s.length === 1){
+        const hrs = cur.a/3600;
+        if(cur.p >= R.life_min){
+          if(hrs < .25){ reasons.push(["Whole-course pace", `${cur.p.toFixed(1)}% complete with only ${ft(cur.a)} of active time logged in total.`]); score = 3; hard = true; }
+          else{ const rate = cur.p/hrs; if(rate >= R.life_mult*cr){ reasons.push(["Whole-course pace", `${cur.p.toFixed(1)}% complete in ${ft(cur.a)} of active time: ${rate.toFixed(1)}% per hour. This course usually runs about ${cr.toFixed(1)}% per hour.`]); score = rate/(R.life_mult*cr); } }
+        }
+      } else {
+        const prev = s.at(-2), days = Math.max(1, dayDiff(prev.date, cur.date));
+        gain = +(cur.p - prev.p).toFixed(2); dt = Math.max(0, cur.a - prev.a); since = prev.date;
+        if(gain > 0){
+          const rate = dt > 0 ? gain/(dt/3600) : Infinity;
+          // a student who always works fast in short sessions is compared to their own speed, not the course's
+          const own = []; for(let i=1; i<s.length-1; i++){ const g = s[i].p - s[i-1].p, t = s[i].a - s[i-1].a; if(g > .5 && t >= 300) own.push(g/(t/3600)); }
+          const ownRate = own.length >= 5 ? med(own) : 0, usual = Math.max(cr, ownRate);
+          const usualTxt = ownRate > cr ? `This student usually works fast, about ${ownRate.toFixed(1)}% per hour.` : `This course usually runs about ${cr.toFixed(1)}% per hour.`;
+          if(gain >= R.rate_min_gain){
+            if(dt < R.no_time_min*60){ reasons.push(["Almost no time logged", `Gained ${gain.toFixed(1)}% since ${dshort(prev.date)} with only ${ft(dt)} of active time.`]); score = 3; hard = true; }
+            else if(rate >= Math.max(R.rate_floor, R.rate_mult*usual)){ reasons.push(["Fast for the time logged", `Gained ${gain.toFixed(1)}% in ${ft(dt)} of active time: ${rate.toFixed(1)}% per hour. ${usualTxt}`]); score = Math.max(score, rate/Math.max(R.rate_floor, R.rate_mult*usual)); }
+          }
+          const past = []; for(let i=1; i<s.length-1; i++) past.push((s[i].p - s[i-1].p)/Math.max(1, dayDiff(s[i-1].date, s[i].date)));
+          let normal, basis;
+          if(past.length >= R.min_history){ normal = p90(past); basis = "their own normal"; }
+          else{ normal = courseDay(x.course); basis = "what's normal for students in " + x.course; }
+          normal = Math.max(normal, .5);
+          const thr = Math.max(R.spike_min, R.spike_mult*normal*days), backed = dt >= R.no_time_min*60 && rate < R.spike_needs_rate*usual;
+          if(gain >= thr && !backed){ const span = days===1 ? "1 day" : days + " days"; reasons.push(["Big jump for this student", `Gained ${gain.toFixed(1)}% over ${span}. Based on ${basis}, about ${(normal*days).toFixed(1)}% would already be a big ${span}.`]); score = Math.max(score, gain/thr); }
+          if(gain >= R.ceiling){ reasons.push(["Over the ceiling", `Gained ${gain.toFixed(1)}% between two reports (ceiling is ${R.ceiling}%).`]); score = Math.max(score, 2); hard = true; }
+        }
+      }
+      if(reasons.length) flags.push(Object.assign({id, reasons, score, hard, gain, dt, since, p:cur.p, a:cur.a, timeline:s.slice(-14)}, x));
+    });
+
+    const byUser = {}; flags.forEach(f=>(byUser[f.uid] ||= []).push(f));
+    flags.forEach(f=>{
+      const others = byUser[f.uid].filter(o=>o!==f).map(o=>o.course);
+      if(others.length) f.reasons.push(["Several courses at once", "Also flagged in " + others.join(", ") + "."]);
+      f.level = (f.hard || others.length || f.score >= 2) ? "pri" : "look";
+    });
+    flags.sort((a,b)=>(a.level!=="pri")-(b.level!=="pri") || b.score-a.score);
+
+    M = {latest, first:dates[0], days:dates.length, enrollments:info.size}; F = flags;
+    sel = F[0] ? F[0].id : null; filter = "open"; q = ""; $("#q").value = "";
+    $("#start").hidden = true; $("#dash").hidden = false;
+    $("#topRight").innerHTML = `<div class="loaded num"><b>${dates.length} report${dates.length>1?"s":""}</b> · ${esc(dshort(M.first))}${dates.length>1 ? " to " + esc(dshort(latest)) : ""}<br>${M.enrollments.toLocaleString()} active enrollments · <button class="link" type="button" id="reload">Load different reports</button><br>
+      <label>Sensitivity <select id="sens">${Object.entries(SENS).map(([v,o])=>`<option value="${v}"${v===sens?" selected":""}>${o.label}</option>`).join("")}</select></label></div>`;
+    $("#sens").onchange = e=>{ sens = e.target.value; try{ localStorage.setItem("spike-radar-sens", sens); }catch(err){} analyze(lastReports); };
+    $("#reload").onclick = ()=>{ $("#dash").hidden = true; $("#start").hidden = false; $("#topRight").innerHTML = ""; setStatus(""); $("#files").value = ""; };
+    $("#notes").innerHTML = dates.length === 1 ? '<div class="note"><b>Only one report loaded.</b> With one day there is nothing to compare yet, so only whole-course pace is checked. Load two or more days of reports for the full check.</div>' : "";
+    all();
+  }
+
+  // ---------- review UI ----------
+  const KEY = "spike-radar-reviews";
+  let reviews = {}; try{ reviews = JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){}
+  const save = ()=>{ try{ localStorage.setItem(KEY, JSON.stringify(reviews)); }catch(e){} };
+  const rk = f=>M.latest + "|" + f.id;
+  let filter = "open", sel = null, q = "";
+
+  function all(){ tiles(); filters(); rows(); detail(); }
+  function tiles(){ $("#tF").textContent = F.length; $("#tP").textContent = F.filter(f=>f.level==="pri").length; $("#tR").textContent = F.filter(f=>reviews[rk(f)]?.mark).length + " / " + F.length; $("#tD").textContent = M.days; }
+  function filters(){
+    const open = F.filter(f=>!reviews[rk(f)]?.mark).length;
+    $("#filters").innerHTML = [["open","Needs review",open],["pri","Priority",F.filter(f=>f.level==="pri").length],["done","Reviewed",F.length-open],["all","All",F.length]]
+      .map(([k,l,n])=>`<button class="filter" type="button" data-f="${k}" aria-pressed="${filter===k}">${l} (${n})</button>`).join("");
+  }
+  const pill = f=>{ const r = reviews[rk(f)]; return r?.mark==="concern" ? '<span class="pill pri">Concern</span>' : r?.mark==="fine" ? '<span class="pill fine">Looks fine</span>' : '<span class="pill none">Not yet</span>'; };
+  const lvl = f=>`<span class="pill ${f.level}">${f.level==="pri" ? "Priority" : "Take a look"}</span>`;
+  function rows(){
+    let r = F;
+    if(filter==="open") r = r.filter(f=>!reviews[rk(f)]?.mark);
+    if(filter==="pri") r = r.filter(f=>f.level==="pri");
+    if(filter==="done") r = r.filter(f=>reviews[rk(f)]?.mark);
+    if(q) r = r.filter(f=>[f.name,f.ext,f.uid,f.course].join(" ").toLowerCase().includes(q));
+    $("#rows").innerHTML = r.length ? r.map(f=>`<tr data-e="${esc(f.id)}" class="${f.id===sel?"sel":""}${reviews[rk(f)]?.mark?" done":""}" tabindex="0">
+      <td>${lvl(f)}</td><td>${esc(f.name || f.uid)}<div class="dm">${esc(f.ext || f.uid)}</div></td><td>${esc(f.course)}</td>
+      <td class="r">${f.gain==null ? esc(f.p.toFixed(1)) + "% total" : "+" + f.gain.toFixed(1) + "%"}</td>
+      <td class="r">${f.dt==null ? esc(ft(f.a)) + " total" : esc(ft(f.dt))}</td>
+      <td class="why">${esc(f.reasons.map(x=>x[0]).join(" · "))}</td><td>${pill(f)}</td></tr>`).join("")
+      : `<tr><td colspan="7" class="empty">${F.length ? "Nothing in this view." : "Nothing flagged. Every student's progress looks normal for the time they logged."}</td></tr>`;
+  }
+  function chart(tl){
+    if(tl.length < 2) return "";
+    const W=520,H=170,L=38,R=10,T=10,B=24, v = tl.map(x=>x.p), n = tl.length-1;
+    let lo = Math.max(0, Math.floor((Math.min(...v)-2)/10)*10), hi = Math.min(100, Math.ceil((Math.max(...v)+2)/10)*10); if(hi-lo < 10) hi = lo+10;
+    const x = i=>L+(W-L-R)*i/n, y = p=>T+(H-T-B)*(1-(p-lo)/(hi-lo));
+    let g = ""; for(let p=lo; p<=hi; p+=(hi-lo>40?20:10)) g += `<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="var(--grid)"/><text x="${L-6}" y="${y(p)+4}" text-anchor="end" font-size="11" fill="var(--faint)">${p}%</text>`;
+    g += `<rect x="${x(n-1)}" y="${T}" width="${x(n)-x(n-1)}" height="${H-T-B}" fill="var(--look-bg)"/>`;
+    [0,n].forEach(i=>g += `<text x="${x(i)}" y="${H-6}" text-anchor="${i?"end":"start"}" font-size="11" fill="var(--faint)">${esc(dshort(tl[i].date))}</text>`);
+    const d = tl.map((s,i)=>(i?"L":"M") + x(i).toFixed(1) + " " + y(s.p).toFixed(1)).join(" ");
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Progress by report">${g}<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>${tl.map((s,i)=>`<circle cx="${x(i)}" cy="${y(s.p)}" r="${i===n?4.5:3}" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5"><title>${esc(dshort(s.date))}: ${s.p.toFixed(1)}%, ${ft(s.a)}</title></circle>`).join("")}</svg>`;
+  }
+  function detail(){
+    const f = F.find(x=>x.id===sel), el = $("#detail");
+    if(!f){ el.innerHTML = '<p class="empty">Pick a student from the queue.</p>'; return; }
+    const r = reviews[rk(f)] || {}, tl = f.timeline;
+    el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h3>${esc(f.name || f.uid)}</h3>
+      <div class="dm">${esc(f.ext || "")} · ${esc(f.course)}${f.teachers ? " · " + esc(f.teachers) : ""}</div></div>${lvl(f)}</div>
+      <ul class="why">${f.reasons.map(([h,x])=>`<li><b>${esc(h)}</b>${esc(x)}</li>`).join("")}</ul>
+      ${chart(tl)}
+      <table class="tl num"><thead><tr><th>Report</th><th style="text-align:right">Progress</th><th style="text-align:right">Change</th><th style="text-align:right">Active time</th><th style="text-align:right">Time added</th></tr></thead><tbody>
+      ${tl.map((s,i)=>{ const p = tl[i-1], dp = p ? s.p-p.p : null, da = p ? s.a-p.a : null;
+        return `<tr class="${i===tl.length-1 && tl.length>1 ? "hl" : ""}"><td>${esc(dshort(s.date))}</td><td style="text-align:right">${s.p.toFixed(1)}%</td><td style="text-align:right">${dp==null ? "" : (dp>=0?"+":"") + dp.toFixed(1)}</td><td style="text-align:right">${ft(s.a)}</td><td style="text-align:right">${da==null ? "" : ft(da)}</td></tr>`; }).reverse().join("")}
+      </tbody></table>
+      <div class="review"><button class="btn c${r.mark==="concern"?" on":""}" type="button" data-m="concern">Concern</button><button class="btn f${r.mark==="fine"?" on":""}" type="button" data-m="fine">Looks fine</button>
+      <textarea id="note" placeholder="Note (optional)" aria-label="Note">${esc(r.note || "")}</textarea></div>`;
+    el.querySelectorAll("[data-m]").forEach(b=>b.onclick = ()=>{ const c = reviews[rk(f)] || {}; reviews[rk(f)] = {mark: c.mark===b.dataset.m ? null : b.dataset.m, note: $("#note").value, at: new Date().toISOString()}; save(); all(); });
+    $("#note").oninput = e=>{ reviews[rk(f)] = Object.assign(reviews[rk(f)] || {}, {note: e.target.value}); save(); };
+  }
+
+  document.addEventListener("click", e=>{
+    const b = e.target.closest("[data-f]"); if(b){ filter = b.dataset.f; all(); return; }
+    const tr = e.target.closest("tr[data-e]"); if(tr){ sel = tr.dataset.e; rows(); detail(); }
+  });
+  document.addEventListener("keydown", e=>{ const tr = e.target.closest && e.target.closest("tr[data-e]"); if(tr && e.key==="Enter"){ sel = tr.dataset.e; rows(); detail(); } });
+  $("#q").oninput = e=>{ q = e.target.value.trim().toLowerCase(); rows(); };
+  $("#export").onclick = ()=>{
+    const lines = [["Report date","Enrollment ID","External ID","Name","Course","Level","Review","Note","Reviewed at"]];
+    F.forEach(f=>{ const r = reviews[rk(f)]; if(r?.mark) lines.push([M.latest,f.id,f.ext||"",f.name||"",f.course,f.level==="pri"?"Priority":"Take a look",r.mark==="concern"?"Concern":"Looks fine",r.note||"",r.at||""]); });
+    const csv = lines.map(l=>l.map(v=>'"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "Spike Radar reviews " + M.latest + ".csv"; a.click();
+  };
+
+  // ---------- loading ----------
+  $("#pick").onclick = ()=>$("#files").click();
+  $("#files").onchange = e=>loadFiles(e.target.files);
+  const drop = $("#drop");
+  ["dragenter","dragover"].forEach(t=>drop.addEventListener(t, e=>{ e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(t=>drop.addEventListener(t, e=>{ e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e=>loadFiles(e.dataTransfer.files));
+
+  // ---------- made-up demo ----------
+  $("#demo").onclick = ()=>{
+    let seed = 42; const rnd = ()=>{ seed = (seed*1664525 + 1013904223) % 4294967296; return seed/4294967296; };
+    const courses = ["English 11","Algebra I","Biology","US History","Government","Chemistry","Spanish I","Health"];
+    const days = []; for(let d = new Date(); days.length < 12; d.setDate(d.getDate()-1)) if(d.getDay()%6) days.unshift(iso(d));
+    const en = [];
+    for(let s=0; s<600; s++){
+      const style = rnd()<.6 ? "steady" : rnd()<.75 ? "burst" : "slow", n = 1 + Math.floor(rnd()*3), used = new Set();
+      for(let c=0; c<n; c++){ let co; do{ co = courses[Math.floor(rnd()*courses.length)]; }while(used.has(co)); used.add(co);
+        en.push({name:"Demo Student " + String(s+1).padStart(4,"0"), uid:String(500000+s), id:String(9000000+en.length), course:co, style, p:5+rnd()*45, a:(5+rnd()*35)*3600, rate:1+rnd()}); }
+    }
+    const planted = new Set(); while(planted.size < 10) planted.add(Math.floor(rnd()*en.length));
+    const reports = days.map((d, di)=>({date:d, name:"demo", rows: en.map((e,i)=>{
+      if(di){ let h = e.style==="steady" ? .3+rnd()*1.2 : e.style==="burst" ? (rnd()<.3 ? 2+rnd()*3 : 0) : rnd()*.6; let g = h*e.rate*(.7+rnd()*.6);
+        if(planted.has(i) && di===days.length-1){ g = 9+rnd()*15; h = .02+rnd()*.38; } e.p = Math.min(100, e.p+g); e.a += h*3600; }
+      const sec = Math.round(e.a);
+      return {"Name":e.name,"Course Name":e.course,"User ID":e.uid,"External ID":"D"+e.uid,"Enrollment ID":e.id,"Teachers":"Demo Teacher","Progress":e.p.toFixed(2)+"%",
+        "Active Time":[Math.floor(sec/3600), Math.floor(sec%3600/60), sec%60].map(x=>String(x).padStart(2,"0")).join(":"),"Start Date":"8/10/2026","Target Date":"12/18/2026","Enrollment Status":"Active"};
+    })}));
+    analyze(reports);
+  };
+  if(location.hash !== "#load") $("#demo").click();
+})();
+</script>
+</body>
+</html>
